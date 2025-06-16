@@ -26,13 +26,16 @@
             esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurI_RfmIe9k9xWA71ZLIIsczdLg11Hph-QWgzWd0_r5sbUYYbNeWNxdxCB5WhkHUPjcK_CV3W_SGQCA0ssQEyUiLPKD-kWBBT_dklqzdiyvyAt17ZW1fGVdGFwgsNssf_YMkiJ7WYEqjWKjjUlgiNGrT3xSPA-LKs_qbwApw5QXTFICChry-vG-rS20YZQBgo018rBpeRFQpsDJKxsve3vIJiHMBAX0ChpUVIsPhwBBPXAT1_VcFa9Q1Z";
             // basemap
             const map = new Map({
-                basemap: "satellite"
+                basemap: "streets-vector"
             });
             // 2d view
             const view = new MapView({
-                container: "viewDiv", // Reference to the DOM node that will contain the view
-                map: map // References the map object
+                container: "viewDiv",
+                map: map,
+                center: [-90.1994, 38.6270],
+                zoom: 10
             });
+
 
             const locateBtn = new Locate({
                 view: view
