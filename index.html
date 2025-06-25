@@ -2,92 +2,600 @@
 <html>
 
 <head>
+    <!-- BASIC HTML SETUP: These meta tags and links are required for any ArcGIS JS API application -->
+    
+    <!-- Set character encoding to UTF-8 for proper text display -->
     <meta charset="utf-8" />
+    
+    <!-- Make the app responsive on mobile devices -->
+    <!-- initial-scale=1: Don't zoom in/out when page loads -->
+    <!-- maximum-scale=1: Don't allow user to zoom the page -->
+    <!-- user-scalable=no: Disable pinch-to-zoom gestures -->
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    
+    <!-- Load the ArcGIS JS API CSS file - this provides default styling for all widgets -->
     <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css" />
+    
+    <!-- Load the ArcGIS JS API JavaScript library - this is the main API -->
     <script src="https://js.arcgis.com/4.26/"></script>
 
-    <title>Data Collector for AGOL</title>
-
-    <style>
+    <!-- Page title that appears in browser tab -->
+    <title>Data Collector for AGOL</title>    <style>
+        /* 
+        BASIC PAGE LAYOUT:
+        These styles ensure the map fills the entire browser window
+        */
         html,
         body,
         #viewDiv {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            width: 100%;
+            padding: 0;        /* Remove default spacing around elements */
+            margin: 0;         /* Remove default margins */
+            height: 100%;      /* Make elements fill full height of browser */
+            width: 100%;       /* Make elements fill full width of browser */
         }
 
+        /* 
+        ADD RECORD BUTTON STYLING:
+        This creates a blue button in the top-right corner of the map
+        */
         .addRecordBtn {
-            position: absolute;
-            z-index: 10;
-            top: 10px;
-            right: 10px;
-            background-color: #0079c1;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            text-decoration: none;
+            position: absolute;        /* Position relative to the browser window */
+            z-index: 10;              /* Make sure button appears above map */
+            top: 15px;                /* Distance from top of browser window */
+            /* Increased from 10px to align with the search bar */
+            right: 10px;              /* Distance from right side of browser window */
+            background-color: #0079c1; /* Blue background color (theme color) */
+            color: white;             /* White text color for contrast */
+            padding: 8px 16px;        /* Space inside the button (top/bottom, left/right) */
+            border: none;             /* Remove default button border */
+            border-radius: 4px;       /* Slightly rounded corners */
+            font-size: 14px;          /* Text size */
+            cursor: pointer;          /* Show hand cursor when hovering over button */
+            text-decoration: none;    /* Remove underline from link */
         }
 
+        /* 
+        BUTTON HOVER EFFECT:
+        When user hovers mouse over button, make it darker blue
+        */
         .addRecordBtn:hover {
-            background-color: #005a87;
+            background-color: #005a87; /* Darker blue on hover */
         }
-    </style>
 
-    <script>
-        require(["esri/layers/FeatureLayer", "esri/widgets/Search", "esri/widgets/Locate", "esri/config", "esri/Map", "esri/views/MapView"], (FeatureLayer, Search, Locate, esriConfig, Map, MapView) => {
+        /* 
+        WIDGET STYLING LESSONS:
+        
+        1. WHAT DOESN'T WORK:
+        - Simple class overrides like .esri-search { background: red; } often fail
+        - Calcite Design System has deep CSS specificity that overrides custom styles
+        - Widget styling can be inconsistent between different widgets
+        
+        2. WHAT WORKS BETTER:
+        - Target specific Calcite component classes with !important
+        - Use CSS custom properties (variables) when available
+        - Create custom containers to wrap widgets
+        - Use widget configuration options instead of CSS when possible
+        */        /* Target the specific Calcite components that make up the Search widget */
+        .esri-search .esri-search__input {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            /* Semi-transparent white background - rgba(red, green, blue, transparency) */
+            border: 2px solid #0079c1 !important;
+            /* Custom border color - 2px thick solid blue border */
+            border-radius: 8px !important;
+            /* Rounded corners - 8px radius makes corners curved */
+            font-size: 14px !important;
+            /* Consistent font size - matches our button */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+            /* Subtle shadow - creates depth effect behind search box */
+        }
+
+        /* Style the search input when focused (user is typing) */
+        .esri-search .esri-search__input:focus {
+            border-color: #005a87 !important;
+            /* Darker blue when active - shows user the field is selected */
+            box-shadow: 0 0 0 3px rgba(0, 121, 193, 0.2) !important;
+            /* Focus ring - blue glow around search box when typing */
+        }
+
+        /* Style the search button (magnifying glass) */
+        .esri-search .esri-search__submit-button {
+            background-color: #0079c1 !important;  /* Blue background to match our theme */
+            border-radius: 0 6px 6px 0 !important;
+            /* Only round right corners - left side connects to search input */
+        }
+
+        /* Make the magnifying glass icon white for better contrast */
+        .esri-search .esri-search__submit-button .esri-icon-search {
+            color: white !important;  /* White magnifying glass icon */
+        }        /* Target the Locate widget button specifically */
+        .esri-locate .esri-widget--button {
+            background-color: rgba(255, 255, 255, 0.95) !important; /* Semi-transparent white */
+            border: 2px solid #0079c1 !important;                   /* Blue border to match theme */
+            border-radius: 8px !important;                          /* Rounded corners */
+            width: 40px !important;                                 /* Fixed width */
+            height: 40px !important;                                /* Fixed height (makes it square) */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;  /* Shadow for depth */
+        }
+
+        /* Style the locate button when hovered */
+        .esri-locate .esri-widget--button:hover {
+            background-color: #0079c1 !important;  /* Blue background on hover */
+            color: white !important;               /* White text on hover */
+        }
+
+        /* Style the locate icon inside the button */
+        .esri-locate .esri-icon-locate {
+            color: #0079c1 !important;  /* Blue icon color (crosshairs/target symbol) */
+        }
+
+        /* Change icon color to white when button is hovered */
+        .esri-locate .esri-widget--button:hover .esri-icon-locate {
+            color: white !important;  /* White icon when hovering */
+        }        /* 
+        CONTAINER STYLING APPROACH:
+        Instead of fighting with widget internals, we can style the containers
+        that hold the widgets. This is often more reliable.
+        */
+        .esri-ui-top-left .esri-component {
+            margin-bottom: 10px !important;
+            /* Space between widgets - adds 10px gap between each widget */
+        }
+
+        /* Style all widgets in the top-left corner */
+        .esri-ui-top-left .esri-widget {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;  /* Drop shadow for all widgets */
+            border-radius: 8px !important;                          /* Rounded corners for all widgets */
+        }
+
+        /*
+        CUSTOM CONTAINER CLASS:
+        We'll create custom containers in JavaScript for even better control
+        This class can be applied to widget containers for consistent styling
+        */
+        .custom-widget-container {
+            background: rgba(255, 255, 255, 0.97);    /* Almost white background */
+            border-radius: 10px;                       /* More rounded corners */
+            padding: 4px;                              /* Small padding inside container */
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2); /* Larger shadow for more depth */
+            margin-bottom: 12px;                       /* Space below each container */
+            border: 1px solid rgba(0, 121, 193, 0.3); /* Subtle blue border */
+        }
+
+        /*
+        WHY !important IS NEEDED:
+        Calcite Design System uses very specific CSS selectors with high specificity.
+        Without !important, our styles get overridden by the framework's styles.
+        This is not ideal but necessary for deep customization.
+        */
+
+        /* 
+        MARKER STYLING:
+        Style the search result marker to match our theme
+        We'll handle marker styling through JavaScript since CSS targeting is limited
+        */        /* Style the search result popup to match theme */
+        .esri-popup .esri-popup-header {
+            background-color: #0079c1 !important;  /* Blue header background */
+            color: white !important;               /* White text in header */
+        }
+
+        .esri-popup .esri-popup-body {
+            border: 2px solid #0079c1 !important;  /* Blue border around popup content */
+        }
+
+        /* 
+        ZOOM WIDGET STYLING:
+        Style the zoom buttons to match our theme
+        The zoom widget has two buttons: zoom in (+) and zoom out (-)
+        */
+        .esri-zoom .esri-widget--button {
+            background-color: rgba(255, 255, 255, 0.95) !important; /* Semi-transparent white background */
+            border: 2px solid #0079c1 !important;                   /* Blue border */
+            color: #0079c1 !important;                              /* Blue text/icons */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;   /* Shadow for depth */
+        }
+
+        /* When user hovers over zoom buttons */
+        .esri-zoom .esri-widget--button:hover {
+            background-color: #0079c1 !important;  /* Blue background on hover */
+            color: white !important;               /* White text/icons on hover */
+        }
+
+        /* Keep border-radius for zoom in/out */
+        .esri-zoom .esri-widget--button:first-child {
+            border-radius: 8px 8px 0 0 !important;
+            /* Round top corners of zoom in button (top-left, top-right, bottom-right, bottom-left) */
+        }
+
+        .esri-zoom .esri-widget--button:last-child {
+            border-radius: 0 0 8px 8px !important;
+            /* Round bottom corners of zoom out button */
+        }        /* 
+        WIDGET POSITIONING:
+        Custom positioning to put search on top
+        By default, widgets stack in the order they're added
+        We use CSS 'order' property to control the visual order
+        */
+        .esri-ui-top-left {
+            flex-direction: column !important;  /* Stack widgets vertically (top to bottom) */
+        }
+
+        /* Give search widget priority in ordering */
+        .esri-search {
+            order: 1 !important;        /* Search appears first (at the top) */
+            margin-bottom: 12px !important;  /* Space below search widget */
+        }
+
+        .esri-zoom {
+            order: 2 !important;        /* Zoom appears second (in the middle) */
+            margin-bottom: 8px !important;   /* Space below zoom widget */
+        }
+
+        .esri-locate {
+            order: 3 !important;        /* Locate appears third (at the bottom) */
+        }
+    </style>    <script>
+        /*
+        JAVASCRIPT SECTION:
+        This is where we write the code to create our map and add functionality
+        
+        REQUIRE FUNCTION:
+        ArcGIS uses AMD (Asynchronous Module Definition) loading
+        We "require" the modules we need, then use them in our code
+        */
+        require([
+            "esri/layers/FeatureLayer",        // For displaying data from ArcGIS Online
+            "esri/widgets/Search",              // Search widget for finding locations  
+            "esri/widgets/Locate",              // Locate widget for finding user's location
+            "esri/widgets/Zoom",                // Zoom widget for zooming in/out
+            "esri/config",                      // Configuration settings
+            "esri/Map",                         // The map object
+            "esri/views/MapView",               // 2D map view
+            "esri/Graphic",                     // For creating custom graphics/markers
+            "esri/symbols/SimpleMarkerSymbol",  // For styling markers
+            "esri/renderers/SimpleRenderer"     // For applying symbols to layers
+        ], (FeatureLayer, Search, Locate, Zoom, esriConfig, Map, MapView, Graphic, SimpleMarkerSymbol, SimpleRenderer) => {
+            
+            /*
+            API KEY SETUP:
+            This key allows your app to access ArcGIS Online services
+            You get this from your ArcGIS Developer account
+            */
             esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurI_RfmIe9k9xWA71ZLIIsczdLg11Hph-QWgzWd0_r5sbUYYbNeWNxdxCB5WhkHUPjcK_CV3W_SGQCA0ssQEyUiLPKD-kWBBT_dklqzdiyvyAt17ZW1fGVdGFwgsNssf_YMkiJ7WYEqjWKjjUlgiNGrT3xSPA-LKs_qbwApw5QXTFICChry-vG-rS20YZQBgo018rBpeRFQpsDJKxsve3vIJiHMBAX0ChpUVIsPhwBBPXAT1_VcFa9Q1Z";
-            // basemap
+
+            /*
+            CREATE THE MAP:
+            The Map object contains the layers (data) you want to display
+            A basemap is the background map (streets, satellite, etc.)
+            */
             const map = new Map({
-                basemap: "streets-vector"
+                basemap: "streets-vector"  // Streets basemap with vector graphics (crisp at any zoom)
             });
-            // 2d view
+
+            /*
+            CREATE THE MAP VIEW:
+            The MapView displays the map in 2D and handles user interactions
+            */
             const view = new MapView({
-                container: "viewDiv",
-                map: map,
-                center: [-90.1994, 38.6270],
-                zoom: 3
+                container: "viewDiv",               // HTML element where map will appear
+                map: map,                           // The map object we created above
+                center: [-90.1994, 38.6270],      // Starting location [longitude, latitude] - St. Louis, MO
+                zoom: 3                             // Starting zoom level (1 = world view, 20 = very close)
             });
 
+            /*
+            REMOVE DEFAULT ZOOM CONTROLS:
+            MapView automatically adds zoom buttons
+            We remove them so we can add our own custom styled zoom widget
+            */
+            view.ui.remove("zoom");            /*
+            CUSTOM MARKER SYMBOL:
+            Create a larger blue marker for map records (previously red)
+            This symbol will be used for search results and feature layer points
+            */
+            const customMarkerSymbol = new SimpleMarkerSymbol({
+                style: "circle",        // Shape of the marker (circle, square, diamond, etc.)
+                color: "#0079c1",       // Fill color - our blue theme color
+                size: 16,               // Size in pixels - larger than default for visibility
+                outline: {              // Border around the marker
+                    color: "white",     // White border color for contrast
+                    width: 2            // Border width in pixels
+                }
+            });
+
+            /*
+            CREATE LOCATE WIDGET:
+            This widget finds the user's current location using GPS/network location
+            */
             const locateBtn = new Locate({
-                view: view
+                view: view,                    // Connect to our map view
+                useHeadingEnabled: false,      // Don't show compass direction (simpler)
+                scale: 1500                    // Zoom level when location is found (smaller = closer)
             });
 
-            // Add the locate widget to the top left corner of the view
-            view.ui.add(locateBtn, {
-                position: "top-left"
-            });
-
+            /*
+            CREATE ZOOM WIDGET:
+            This widget provides zoom in/out buttons
+            We create it manually so we can control its styling and position
+            */
+            const zoomWidget = new Zoom({
+                view: view  // Connect to our map view
+            });            /*
+            CREATE SEARCH WIDGET:
+            This widget allows users to search for addresses, places, and coordinates
+            */
             const searchWidget = new Search({
-                view: view
+                view: view,                      // Connect to our map view
+                includeDefaultSources: true,    // Use ArcGIS Online's geocoding service
+                popupEnabled: true,              // Show popup when user clicks search result
+                resultGraphicEnabled: false,     // Don't use default marker (we'll create our own)
+                maxResults: 6,                   // Limit number of search results shown
+                maxSuggestions: 6,               // Limit number of suggestions as user types
+                minSuggestCharacters: 2,         // Start showing suggestions after 2 characters
+                searchAllEnabled: false,         // Don't search all sources at once
+                locationEnabled: false           // Don't use device location in search
             });
 
-            // Adds the search widget below other elements in
-            // the top left corner of the view
+            /*
+            ADD WIDGETS TO THE MAP:
+            We add widgets to specific positions on the map
+            The 'index' property controls the order they appear
+            */
+            
+            // 1. Add search widget first (appears at top)
             view.ui.add(searchWidget, {
-                position: "top-left",
-                index: 2
+                position: "top-left",    // Top-left corner of map
+                index: 0                 // First position (top)
             });
 
+            // 2. Add zoom widget second (appears in middle)
+            view.ui.add(zoomWidget, {
+                position: "top-left",    // Same corner as search
+                index: 1                 // Second position (middle)
+            });
+
+            // 3. Add locate widget third (appears at bottom)
+            view.ui.add(locateBtn, {
+                position: "top-left",    // Same corner as other widgets
+                index: 2                 // Third position (bottom)
+            });            /*
+            CUSTOM SEARCH RESULT HANDLING:
+            When someone searches for a location, we want to show our custom blue marker
+            instead of the default red marker
+            */
+            let currentSearchGraphic = null;  // Variable to track the current search marker
+
+            // Listen for when a search is completed
+            searchWidget.on("search-complete", function(event) {
+                console.log("Search completed:", event);  // Log search results for debugging
+
+                // Remove loading styles when search is done
+                const searchElement = document.querySelector('.esri-search');
+                if (searchElement) {
+                    searchElement.classList.remove('searching');
+                }
+
+                // Remove previous search marker if it exists (only show one at a time)
+                if (currentSearchGraphic) {
+                    view.graphics.remove(currentSearchGraphic);
+                }
+
+                // Check if we got search results
+                if (event.results && event.results.length > 0) {
+                    const firstResult = event.results[0];  // Get the first search result
+                    if (firstResult.results && firstResult.results.length > 0) {
+                        const searchResult = firstResult.results[0];  // Get the actual result data
+                        
+                        /*
+                        CREATE CUSTOM SEARCH MARKER:
+                        Instead of using the default marker, we create our own with custom styling
+                        */
+                        currentSearchGraphic = new Graphic({
+                            geometry: searchResult.feature.geometry,  // Location of the search result
+                            symbol: customMarkerSymbol,               // Our custom blue marker
+                            // Create a popup that shows when marker is clicked
+                            popupTemplate: {
+                                title: searchResult.name || "Search Result",
+                                content: `
+                                    <div style="color: #0079c1; font-weight: bold;">
+                                        ${searchResult.name || "Location"}
+                                    </div>
+                                    <div style="margin-top: 8px;">
+                                        ${searchResult.feature.attributes ? 
+                                          Object.entries(searchResult.feature.attributes)
+                                            .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                                            .join('<br>') : 
+                                          'Search result location'
+                                        }
+                                    </div>
+                                `
+                            }
+                        });
+
+                        // Add our custom marker to the map
+                        view.graphics.add(currentSearchGraphic);
+
+                        /*
+                        MARKER ANIMATION EFFECT:
+                        Briefly make the marker larger and darker to draw attention
+                        */
+                        setTimeout(() => {
+                            if (currentSearchGraphic && currentSearchGraphic.symbol) {
+                                // Create a temporary larger, darker symbol
+                                const highlightSymbol = currentSearchGraphic.symbol.clone();
+                                highlightSymbol.size = 16;             // Keep same size
+                                highlightSymbol.color = "#005a87";     // Darker blue for emphasis
+                                currentSearchGraphic.symbol = highlightSymbol;
+                                
+                                // Return to normal appearance after 1 second
+                                setTimeout(() => {
+                                    if (currentSearchGraphic) {
+                                        currentSearchGraphic.symbol = customMarkerSymbol;
+                                    }
+                                }, 1000);  // 1000 milliseconds = 1 second
+                            }
+                        }, 100);  // 100 milliseconds delay before highlighting
+                    }
+                }
+            });            /*
+            WAIT FOR MAP TO LOAD, THEN CUSTOMIZE WIDGETS:
+            We wait for the map view to finish loading before we try to modify widget appearance
+            This ensures all the HTML elements exist before we try to style them
+            */
+            view.when(() => {
+                // Find the search widget's HTML element in the page
+                const searchElement = document.querySelector('.esri-search');
+                if (searchElement) {
+                    // Add a custom CSS class for additional styling if needed
+                    searchElement.classList.add('custom-styled-search');
+                    
+                    // Change the placeholder text in the search input box
+                    const searchInput = searchElement.querySelector('.esri-search__input');
+                    if (searchInput) {
+                        searchInput.placeholder = "Search for places or addresses...";
+                    }
+                }
+
+                // Find and customize the locate widget
+                const locateElement = document.querySelector('.esri-locate');
+                if (locateElement) {
+                    locateElement.classList.add('custom-styled-locate');
+                    
+                    // Add a helpful tooltip when user hovers over the locate button
+                    const locateButton = locateElement.querySelector('.esri-widget--button');
+                    if (locateButton) {
+                        locateButton.title = "Find my location";
+                    }
+                }
+
+                // Find and customize the zoom widget
+                const zoomElement = document.querySelector('.esri-zoom');
+                if (zoomElement) {
+                    zoomElement.classList.add('custom-styled-zoom');
+                    
+                    // Add helpful tooltips to the zoom buttons
+                    const zoomButtons = zoomElement.querySelectorAll('.esri-widget--button');
+                    if (zoomButtons.length >= 2) {
+                        zoomButtons[0].title = "Zoom in";   // First button (+ symbol)
+                        zoomButtons[1].title = "Zoom out";  // Second button (- symbol)
+                    }
+                }
+
+                /*
+                DEBUGGING TIP:
+                Log the widget elements to see their structure
+                This helps when you need to understand how to style widgets
+                */
+                console.log('Search widget DOM:', searchElement);
+                console.log('Locate widget DOM:', locateElement);
+                console.log('Zoom widget DOM:', zoomElement);
+            });            /*
+            WIDGET EVENT LISTENERS:
+            We can listen for when widgets are used and respond accordingly
+            This allows us to provide visual feedback to users
+            */
+
+            // Listen for when user starts a search
+            searchWidget.on("search-start", function() {
+                console.log("Search started - you could add loading styles here");
+                // Add a visual indicator that search is happening
+                const searchElement = document.querySelector('.esri-search');
+                if (searchElement) {
+                    searchElement.classList.add('searching');  // CSS class for loading state
+                }
+            });
+
+            // Listen for when user's location is found
+            locateBtn.on("locate", function() {
+                console.log("Location found - you could add success styles here");
+                // You could add visual feedback here when location is successfully found
+            });
+
+            /*
+            ADD FEATURE LAYER TO MAP:
+            This loads data from your ArcGIS Online feature service
+            We apply custom styling so the points are blue instead of red
+            */
             const layer = new FeatureLayer({
-                // URL to the service 
-                url: "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/survey123_da549672883a44adbc6670117e0c1369_results/FeatureServer" //Your item URL Goes Here
+                // URL to your Survey123 feature service
+                url: "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/survey123_da549672883a44adbc6670117e0c1369_results/FeatureServer",
+                
+                // Apply custom styling to all features in this layer
+                renderer: new SimpleRenderer({
+                    symbol: new SimpleMarkerSymbol({
+                        style: "circle",          // Circular markers
+                        color: "#0079c1",         // Blue color to match our theme
+                        size: 12,                 // Slightly smaller than search results
+                        outline: {
+                            color: "white",       // White border for contrast
+                            width: 2              // 2 pixel border
+                        }
+                    })
+                })
             });
+            
+            // Add the layer to our map
+            map.add(layer);            /*
+            SUMMARY OF LESSONS LEARNED:
+            
+            1. WIDGET PROPERTIES FIRST: Always check if the widget has properties 
+               that can achieve your desired styling without CSS.
+            
+            2. TARGET SPECIFIC CLASSES: Use specific Calcite CSS classes with !important
+               rather than trying to override the main widget class.
+            
+            3. USE CONTAINERS: Wrap widgets in custom containers for better control.
+            
+            4. WAIT FOR RENDERING: Use view.when() to ensure widgets are fully rendered
+               before applying complex styling.
+            
+            5. EVENT-DRIVEN STYLING: Use widget events to apply conditional styles
+               based on user interactions or widget states.
+            
+            6. DEBUG WITH CONSOLE: Log widget DOM elements to understand their structure
+               and available CSS classes.
+            
+            7. !important IS SOMETIMES NECESSARY: Calcite's high specificity requires
+               !important declarations, though this isn't ideal.
+            
+            8. TEST THOROUGHLY: Widget styling can behave differently across devices
+               and browsers, so test your customizations thoroughly.
 
-            map.add(layer);
-        });
+            9. CUSTOM GRAPHICS: For markers and symbols, creating custom graphics
+               is often more reliable than trying to style default ones.
+
+            10. WIDGET POSITIONING: Use the index property when adding widgets
+                to control their order in the UI.
+                
+            11. CONSISTENT THEMING: Use the same colors throughout your app for
+                a professional, cohesive appearance.
+                
+            12. USER EXPERIENCE: Add tooltips, loading states, and visual feedback
+                to help users understand what's happening in your app.
+            */
+        });  // End of require function
     </script>
 
 </head>
 
 <body>
+    <!-- 
+    BODY CONTENT:
+    The body contains the actual content that users see
+    -->
+    
+    <!-- 
+    ADD RECORD BUTTON:
+    This button opens Survey123 in a new tab for data collection
+    It's positioned over the map using CSS absolute positioning
+    -->
     <a href="https://arcg.is/0G1WDe" target="_blank" class="addRecordBtn">Add
         Record</a>
+    
+    <!-- 
+    MAP CONTAINER:
+    This div element is where the ArcGIS map will be displayed
+    The id "viewDiv" matches what we specified in the MapView constructor
+    -->
     <div id="viewDiv"></div>
 </body>
 
